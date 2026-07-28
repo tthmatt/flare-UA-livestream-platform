@@ -332,8 +332,8 @@ export function StreamConsole({
                 <small>OPERATOR</small>
               </div>
               <p>
-                Enter the authenticated publish URL in your DJI flight app.
-                Publisher credentials are intentionally never exposed here.
+                Publish from DJI GO 4 or DJI Fly to the live AWS gateway.
+                The server is online; it is waiting for an aircraft broadcast.
               </p>
               <label className="connection-field">
                 <span>RTMP server</span>
@@ -367,11 +367,27 @@ export function StreamConsole({
                   </button>
                 </div>
               </label>
+              <label className="connection-field">
+                <span>Full DJI publish address</span>
+                <div>
+                  <code>{publishPath}</code>
+                  <button
+                    onClick={() => void copy(publishPath, "publish")}
+                    aria-label="Copy DJI publish address"
+                  >
+                    {copied === "publish" ? (
+                      <Check size={14} />
+                    ) : (
+                      <Clipboard size={14} />
+                    )}
+                  </button>
+                </div>
+              </label>
               <div className="credential-note">
                 <LockKeyhole size={16} />
                 <span>
-                  Add the publisher username and password supplied by your
-                  administrator to the URL before flight.
+                  Do not change the stream path. Start the DJI broadcast, then
+                  wait for this console to show LIVE FEED ACTIVE.
                 </span>
               </div>
               <button className="primary-action" onClick={() => setShowSetup(true)}>
@@ -413,9 +429,9 @@ export function StreamConsole({
                 </div>
               </div>
               <p className="architecture-note">
-                Vercel hosts this web console. MediaMTX runs on a persistent
-                gateway because RTMP requires a permanent TCP listener on port
-                1935.
+                Vercel hosts this console. The AWS MediaMTX gateway at
+                livestream.flaredynamics.com accepts RTMP on port 1935 and
+                serves the HLS viewer over HTTPS.
               </p>
             </article>
 
@@ -489,9 +505,8 @@ export function StreamConsole({
                 <div>
                   <strong>Enter the authenticated publish URL</strong>
                   <p>
-                    Use the RTMP server and stream path shown in this console.
-                    Insert the operator credentials provided through the secure
-                    Flare operations channel.
+                    Use this exact address in the Custom RTMP field. The live
+                    path is <code>live/drone</code>.
                   </p>
                   <code>{publishPath}</code>
                 </div>
@@ -502,7 +517,8 @@ export function StreamConsole({
                   <strong>Start at 1080p where available</strong>
                   <p>
                     Use a stable uplink and confirm the console changes to LIVE
-                    FEED ACTIVE before the aircraft leaves the immediate area.
+                    FEED ACTIVE. If it remains on AWAITING FEED, DJI is not yet
+                    publishing to the gateway.
                   </p>
                 </div>
               </li>
@@ -519,8 +535,8 @@ export function StreamConsole({
             </ol>
             <div className="modal-warning">
               <ShieldCheck size={18} />
-              Never send the publisher password through a public chat or expose
-              it in a screenshot.
+              The gateway has been stable for weeks. Schedule server updates
+              and the required restart outside of livestream operations.
             </div>
           </section>
         </div>
