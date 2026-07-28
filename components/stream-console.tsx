@@ -1,6 +1,7 @@
 "use client";
 
 import Hls from "hls.js";
+import Image from "next/image";
 import {
   Activity,
   Antenna,
@@ -25,6 +26,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import flareLogo from "@/public/flare-dynamics-logo.png";
 
 type Health = {
   configured: boolean;
@@ -39,16 +41,6 @@ type Props = {
   hlsStreamUrl: string;
   streamName: string;
 };
-
-function FlareMark() {
-  return (
-    <span className="flare-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-    </span>
-  );
-}
 
 export function StreamConsole({
   rtmpBaseUrl,
@@ -192,11 +184,13 @@ export function StreamConsole({
     <main className="app-shell">
       <header className="app-header">
         <a className="brand" href="https://www.flaredynamics.com/">
-          <FlareMark />
-          <span>
-            <strong>FLARE DYNAMICS</strong>
-            <small>UA LIVESTREAM OPERATIONS</small>
-          </span>
+          <Image
+            className="brand-logo"
+            src={flareLogo}
+            alt="Flare Dynamics"
+            priority
+          />
+          <span className="brand-product">UA LIVESTREAM</span>
         </a>
         <nav aria-label="Primary navigation">
           <a className="active" href="#live">
@@ -278,8 +272,12 @@ export function StreamConsole({
                   </div>
                 )}
                 <div className="video-watermark">
-                  <FlareMark />
-                  <span>FLARE DYNAMICS</span>
+                  <Image
+                    className="watermark-logo"
+                    src={flareLogo}
+                    alt=""
+                    aria-hidden="true"
+                  />
                 </div>
               </div>
               <div className="telemetry-strip">
