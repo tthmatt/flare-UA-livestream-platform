@@ -1,17 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "./viewer.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Flare Dynamics | UA Livestream",
+    default: "Flare Dynamics | Live Drone View",
     template: "%s | Flare Dynamics",
   },
   description:
-    "Secure live drone video operations console for Flare Dynamics unmanned aircraft missions.",
-  applicationName: "Flare UA Livestream",
+    "Watch the Flare Dynamics live aerial operations feed. The viewer automatically resumes when the aircraft broadcast returns.",
+  applicationName: "Flare Dynamics Livestream",
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
 };
 
