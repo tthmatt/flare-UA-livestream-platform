@@ -1,0 +1,40 @@
+services:
+  mediamtx:
+    image: bluenviron/mediamtx:1.19.3
+    container_name: flare-mediamtx
+    restart: unless-stopped
+    ports:
+      - "1935:1935/tcp"
+      - "8888:8888/tcp"
+      - "8889:8889/tcp"
+      - "8189:8189/udp"
+    environment:
+      MTX_LOGLEVEL: info
+      MTX_LOGSTRUCTURED: "true"
+      MTX_RTSP: "false"
+      MTX_SRT: "false"
+      MTX_MOQ: "false"
+      MTX_HLSALWAYSREMUX: "true"
+      MTX_HLSVARIANT: lowLatency
+      MTX_HLSALLOWORIGINS_0: ${WEB_ORIGIN:?Set WEB_ORIGIN in .env}
+      MTX_WEBRTCALLOWORIGINS_0: ${WEB_ORIGIN:?Set WEB_ORIGIN in .env}
+      MTX_WEBRTCADDITIONALHOSTS_0: ${WEBRTC_PUBLIC_HOST:?Set WEBRTC_PUBLIC_HOST in .env}
+      MTX_AUTHMETHOD: internal
+      MTX_AUTHINTERNALUSERS_0_USER: ${MTX_PUBLISH_USER:?Set MTX_PUBLISH_USER in .env}
+      MTX_AUTHINTERNALUSERS_0_PASS: ${MTX_PUBLISH_PASS:?Set MTX_PUBLISH_PASS in .env}
+      MTX_AUTHINTERNALUSERS_0_PERMISSIONS_0_ACTION: publish
+      MTX_AUTHINTERNALUSERS_0_PERMISSIONS_0_PATH: ${MTX_STREAM_PATH:?Set MTX_STREAM_PATH in .env}
+      MTX_AUTHINTERNALUSERS_1_USER: any
+      MTX_AUTHINTERNALUSERS_1_PERMISSIONS_0_ACTION: read
+      MTX_AUTHINTERNALUSERS_1_PERMISSIONS_0_PATH: ${MTX_STREAM_PATH:?Set MTX_STREAM_PATH in .env}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "/mediamtx",
+          "--version"
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
