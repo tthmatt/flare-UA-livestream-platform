@@ -1,27 +1,14 @@
 export const dynamic = "force-dynamic";
 
 const timeoutMs = 4_500;
+const defaultStreamUrl =
+  "https://livestream.flaredynamics.com/live/drone/index.m3u8";
 
 export async function GET() {
   const streamUrl =
     process.env.STREAM_HEALTH_URL ??
     process.env.NEXT_PUBLIC_HLS_STREAM_URL ??
-    "";
-
-  if (!streamUrl) {
-    return Response.json(
-      {
-        configured: false,
-        online: false,
-        checkedAt: new Date().toISOString(),
-        message: "Playback endpoint is not configured.",
-      },
-      {
-        status: 200,
-        headers: { "Cache-Control": "no-store" },
-      },
-    );
-  }
+    defaultStreamUrl;
 
   try {
     const response = await fetch(streamUrl, {
@@ -46,23 +33,20 @@ export async function GET() {
         statusCode: response.status,
         message: online
           ? "Live playlist is available."
-          : "Gateway responded, but no active live playlist was found.",
+          : "The aircraft feed is currently paused.",
       },
       {
         status: 200,
         headers: { "Cache-Control": "no-store" },
       },
     );
-  } catch (error) {
+  } catch {
     return Response.json(
       {
         configured: true,
         online: false,
         checkedAt: new Date().toISOString(),
-        message:
-          error instanceof Error
-            ? `Gateway unavailable: ${error.name}`
-            : "Gateway unavailable.",
+        message: "The aircraft feed is currently paused.",
       },
       {
         status: 200,
@@ -71,4 +55,3 @@ export async function GET() {
     );
   }
 }
-
