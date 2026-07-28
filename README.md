@@ -38,16 +38,21 @@ Create a Vercel project from this repository and set:
 | `NEXT_PUBLIC_HLS_STREAM_URL` | Browser HLS playlist URL |
 | `STREAM_HEALTH_URL` | Optional server-side health target |
 
-Recommended production values:
+Verified production values:
 
 ```text
-NEXT_PUBLIC_RTMP_BASE_URL=rtmp://ingest.flaredynamics.com:1935/live
-NEXT_PUBLIC_HLS_STREAM_URL=https://streams.flaredynamics.com/live/drone/index.m3u8
-STREAM_HEALTH_URL=https://streams.flaredynamics.com/live/drone/index.m3u8
+NEXT_PUBLIC_RTMP_BASE_URL=rtmp://livestream.flaredynamics.com:1935/live
+NEXT_PUBLIC_HLS_STREAM_URL=https://livestream.flaredynamics.com/live/drone/index.m3u8
+STREAM_HEALTH_URL=https://livestream.flaredynamics.com/live/drone/index.m3u8
 ```
 
-Do not put publisher credentials in any `NEXT_PUBLIC_*` variable. Every
-`NEXT_PUBLIC_*` value is shipped to browsers.
+Every `NEXT_PUBLIC_*` value is shipped to browsers. Do not use it for any
+future publisher credential.
+
+The AWS gateway is currently healthy: MediaMTX listens on RTMP port `1935` and
+Caddy serves `livestream.flaredynamics.com` over HTTPS. Its configured stream
+paths are `live/drone` and `live/drone-in`. When no DJI device is publishing to
+`live/drone`, viewers correctly see an awaiting-feed state.
 
 ## MediaMTX gateway
 
@@ -69,18 +74,19 @@ Open these firewall ports on the gateway:
 | `8889` | TCP | WebRTC handshake, if used |
 | `8189` | UDP | WebRTC media, if used |
 
-Use a reverse proxy such as Caddy or Nginx in front of port `8888` so
-`streams.flaredynamics.com` receives a valid TLS certificate. Vercel
-automatically provides SSL for `livestream.flaredynamics.com` after the domain
-is attached to the Vercel project.
+Use a reverse proxy such as Caddy or Nginx in front of port `8888` so the
+gateway receives a valid TLS certificate. This deployment uses Caddy at
+`livestream.flaredynamics.com`; do not point that domain at Vercel because it
+would disconnect the RTMP/HLS gateway.
 
 The authenticated DJI publish URL uses this form:
 
 ```text
-rtmp://USERNAME:PASSWORD@ingest.flaredynamics.com:1935/live/drone
+rtmp://livestream.flaredynamics.com:1935/live/drone
 ```
 
-Keep this full URL out of the public repository, screenshots and public chat.
+The current address has no credentials. If access control is added later, keep
+the secret portion out of the public repository, screenshots and public chat.
 
 ## Validation
 
@@ -97,3 +103,6 @@ Live video is decision-support information. The pilot-in-command remains
 responsible for safe conduct of the flight and must not rely on remote video as
 the sole means of maintaining required awareness.
 
+The server currently has pending operating-system updates and requires a
+restart. Do not restart it during an active livestream; snapshot the instance
+and schedule maintenance after the operation.
