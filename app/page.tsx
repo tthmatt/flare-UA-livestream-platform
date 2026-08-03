@@ -12,7 +12,7 @@ export default function Home() {
 
   return (
     <StreamConsole
-@@ -16,4 +18,3 @@ export default function Home() {
+  export default function Home() {
     />
   );
 }
