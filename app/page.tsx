@@ -5,10 +5,10 @@ export const dynamic = "force-dynamic";
 export default function Home() {
   const rtmpBaseUrl =
     process.env.NEXT_PUBLIC_RTMP_BASE_URL ??
-    "rtmp://livestream.flaredynamics.com:1935/live";
+    "rtmp://3.1.11.194/live/drone";
   const hlsStreamUrl =
     process.env.NEXT_PUBLIC_HLS_STREAM_URL ??
-    "https://livestream.flaredynamics.com/live/drone/index.m3u8";
+    "http://3.1.11.194:8888/live/drone/";
 
   return (
     <StreamConsole
