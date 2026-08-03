@@ -10,9 +10,6 @@ export default function Home() {
     process.env.NEXT_PUBLIC_HLS_STREAM_URL ??
     "http://3.1.11.194:8888/live/drone/index.m3u8";
 
-  return (
-    <StreamConsole
   export default function Home() {
-    />
-  );
+  return <StreamConsole />;
 }
