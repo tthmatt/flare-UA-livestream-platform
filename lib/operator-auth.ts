@@ -14,6 +14,10 @@ function signature() {
     : "";
 }
 
+export function operatorAccessConfigured() {
+  return Boolean(process.env.OPERATOR_PASSWORD);
+}
+
 export function isOperatorPassword(password: string) {
   const configuredPassword = process.env.OPERATOR_PASSWORD;
   if (!configuredPassword) return false;
@@ -25,12 +29,13 @@ export function isOperatorPassword(password: string) {
 
 export function createOperatorSession() {
   const value = signature();
-  if (!value) throw new Error("Operator access is not configured.");
-  return `v1.${value}`;
+  return value ? `v1.${value}` : "";
 }
 
 export function hasOperatorSession(value?: string) {
   const expected = createOperatorSession();
+  if (!expected) return false;
+
   const received = Buffer.from(value ?? "");
   const target = Buffer.from(expected);
   return received.length === target.length && timingSafeEqual(received, target);
