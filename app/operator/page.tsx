@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { OperatorDashboard } from "@/components/operator-dashboard";
+import { hasOperatorSession, operatorSessionCookie } from "@/lib/operator-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +15,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function OperatorPage() {
+export default async function OperatorPage() {
+  const cookieStore = await cookies();
+  if (!hasOperatorSession(cookieStore.get(operatorSessionCookie)?.value)) {
+    redirect("/operator/login");
+  }
+
   const gatewayIp = "3.1.11.194";
   const rtmpServer =
     process.env.NEXT_PUBLIC_RTMP_BASE_URL ??

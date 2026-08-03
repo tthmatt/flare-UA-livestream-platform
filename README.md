@@ -8,15 +8,10 @@ console plays the resulting low-latency HLS feed over HTTPS.
 
 ```mermaid
 flowchart LR
-  A["DJI GO 4 / DJI Fly"] -->|RTMP :1935| B["MediaMTX gateway"]
-  B -->|Low-latency HLS| C["Vercel console"]
-  C -->|HTTPS| D["Remote viewers"]
+  A["DJI GO 4 / DJI Fly"] -->|"RTMP :1935"| B["MediaMTX gateway"]
+  B -->|"Low-latency HLS"| C["Vercel console"]
+  C -->|"HTTPS"| D["Remote viewers"]
 ```
-
-The web console belongs on Vercel. The RTMP gateway does not: RTMP needs a
-permanent TCP listener on port 1935, while Vercel Services and Functions are
-HTTP request-based and have bounded execution durations. The `infra/mediamtx`
-folder contains the persistent gateway configuration.
 
 ## Local web setup
 
@@ -30,29 +25,27 @@ Open `http://localhost:3000`.
 
 ## Vercel configuration
 
-Create a Vercel project from this repository and set:
+Set these variables in Vercel Project Settings → Environment Variables:
 
 | Variable | Purpose |
 | --- | --- |
 | `NEXT_PUBLIC_RTMP_BASE_URL` | Public RTMP server/base path, without credentials |
 | `NEXT_PUBLIC_HLS_STREAM_URL` | Browser HLS playlist URL |
-| `STREAM_HEALTH_URL` | Optional server-side health target |
+| `STREAM_HEALTH_URL` | Server-side health target |
+| `OPERATOR_PASSWORD` | Required password for `/operator`; server-only |
+| `OPERATOR_SESSION_SECRET` | Recommended unique random string for signing the operator session cookie |
 
-Verified production values:
+Verified gateway values:
 
 ```text
-NEXT_PUBLIC_RTMP_BASE_URL=rtmp://livestream.flaredynamics.com:1935/live
-NEXT_PUBLIC_HLS_STREAM_URL=https://livestream.flaredynamics.com/live/drone/index.m3u8
-STREAM_HEALTH_URL=https://livestream.flaredynamics.com/live/drone/index.m3u8
+NEXT_PUBLIC_RTMP_BASE_URL=rtmp://3.1.11.194:1935/live
+NEXT_PUBLIC_HLS_STREAM_URL=/api/hls/live/drone/index.m3u8
+STREAM_HEALTH_URL=http://3.1.11.194:8888/live/drone/index.m3u8
 ```
 
-Every `NEXT_PUBLIC_*` value is shipped to browsers. Do not use it for any
-future publisher credential.
-
-The AWS gateway is currently healthy: MediaMTX listens on RTMP port `1935` and
-Caddy serves `livestream.flaredynamics.com` over HTTPS. Its configured stream
-paths are `live/drone` and `live/drone-in`. When no DJI device is publishing to
-`live/drone`, viewers correctly see an awaiting-feed state.
+The `/operator` route is protected by a server-side, HTTP-only session cookie.
+Set `OPERATOR_PASSWORD` in Vercel; never use a `NEXT_PUBLIC_*` variable for
+a password.
 
 ## MediaMTX gateway
 
@@ -61,7 +54,6 @@ MediaMTX is pinned to `v1.19.3`.
 ```bash
 cd infra/mediamtx
 cp .env.example .env
-# Replace the example password with a long random value.
 docker compose up -d
 ```
 
@@ -70,23 +62,16 @@ Open these firewall ports on the gateway:
 | Port | Protocol | Purpose |
 | --- | --- | --- |
 | `1935` | TCP | DJI RTMP ingest |
-| `8888` | TCP | HLS origin; normally placed behind HTTPS |
+| `8888` | TCP | HLS origin consumed by the Vercel proxy |
 | `8889` | TCP | WebRTC handshake, if used |
 | `8189` | UDP | WebRTC media, if used |
 
-Use a reverse proxy such as Caddy or Nginx in front of port `8888` so the
-gateway receives a valid TLS certificate. This deployment uses Caddy at
-`livestream.flaredynamics.com`; do not point that domain at Vercel because it
-would disconnect the RTMP/HLS gateway.
-
-The authenticated DJI publish URL uses this form:
+The public viewer is hosted at `livestream.flaredynamics.com` on Vercel. DJI
+publishes to:
 
 ```text
-rtmp://livestream.flaredynamics.com:1935/live/drone
+rtmp://3.1.11.194:1935/live/drone
 ```
-
-The current address has no credentials. If access control is added later, keep
-the secret portion out of the public repository, screenshots and public chat.
 
 ## Validation
 
@@ -102,7 +87,3 @@ docker compose -f infra/mediamtx/docker-compose.yml config
 Live video is decision-support information. The pilot-in-command remains
 responsible for safe conduct of the flight and must not rely on remote video as
 the sole means of maintaining required awareness.
-
-The server currently has pending operating-system updates and requires a
-restart. Do not restart it during an active livestream; snapshot the instance
-and schedule maintenance after the operation.
