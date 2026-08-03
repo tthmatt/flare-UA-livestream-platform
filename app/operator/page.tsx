@@ -18,7 +18,7 @@ export default function OperatorPage() {
     process.env.NEXT_PUBLIC_RTMP_BASE_URL ??
     `rtmp://${gatewayIp}:1935/live`;
   const streamPath = "drone";
-  const publishAddress = `${rtmpServer.replace(/\\/$/, "")}/${streamPath}`;
+  const publishAddress = `${rtmpServer.replace(/\/$/, "")}/${streamPath}`;
   const hlsAddress =
     process.env.NEXT_PUBLIC_HLS_STREAM_URL ??
     "/api/hls/live/drone/index.m3u8";
