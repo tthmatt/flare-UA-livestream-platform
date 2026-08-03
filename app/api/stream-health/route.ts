@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 const timeoutMs = 4_500;
 const defaultStreamUrl =
-  "https://livestream.flaredynamics.com/live/drone/index.m3u8";
+  "http://3.1.11.194:8888/live/drone/;
 
 export async function GET() {
   const streamUrl =
