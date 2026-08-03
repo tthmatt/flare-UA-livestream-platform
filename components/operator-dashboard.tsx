@@ -26,6 +26,7 @@ type Health = {
 };
 
 type Props = {
+  gatewayIp: string;
   rtmpServer: string;
   streamPath: string;
   publishAddress: string;
@@ -33,6 +34,7 @@ type Props = {
 };
 
 export function OperatorDashboard({
+  gatewayIp,
   rtmpServer,
   streamPath,
   publishAddress,
@@ -86,6 +88,7 @@ export function OperatorDashboard({
     : "Waiting for first check";
 
   const fields = [
+    { name: "ip", label: "AWS gateway public IP", value: gatewayIp },
     { name: "server", label: "RTMP server", value: rtmpServer },
     { name: "path", label: "Stream name / key", value: streamPath },
     {
@@ -93,7 +96,7 @@ export function OperatorDashboard({
       label: "Complete address for DJI custom RTMP",
       value: publishAddress,
     },
-    { name: "hls", label: "Viewer playback address", value: hlsAddress },
+    { name: "hls", label: "Viewer playback route", value: hlsAddress },
   ];
 
   return (
@@ -136,7 +139,7 @@ export function OperatorDashboard({
               <Server size={19} />
               <div>
                 <strong>AWS gateway status</strong>
-                <span>livestream.flaredynamics.com</span>
+                <span>{gatewayIp} · MediaMTX RTMP gateway</span>
               </div>
             </div>
 
@@ -160,10 +163,10 @@ export function OperatorDashboard({
             </button>
 
             <div className={styles.serverFacts}>
+              <span><small>AWS public IP</small><strong>{gatewayIp}</strong></span>
               <span><small>RTMP ingest</small><strong>Port 1935</strong></span>
-              <span><small>HLS playback</small><strong>HTTPS / 443</strong></span>
+              <span><small>Viewer playback</small><strong>Vercel HTTPS proxy</strong></span>
               <span><small>Stream path</small><strong>live/drone</strong></span>
-              <span><small>Health polling</small><strong>Every 8 sec</strong></span>
             </div>
           </section>
 
