@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 const timeoutMs = 4_500;
 const defaultStreamUrl =
-  "http://3.1.11.194:8888/live/drone/;
+  "http://3.1.11.194:8888/live/drone/index.m3u8";
 
 export async function GET() {
   const streamUrl =
