@@ -27,17 +27,9 @@ export default async function OperatorLoginPage({
 
         <form action="/api/operator/login" method="post" className={styles.form}>
           <label htmlFor="password">Operator password</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            autoFocus
-          />
-          {error === "invalid" && (
-            <p className={styles.error}>Incorrect password. Please try again.</p>
-          )}
+          <input id="password" name="password" type="password" autoComplete="current-password" required autoFocus />
+          {error === "invalid" && <p className={styles.error}>Incorrect password. Please try again.</p>}
+          {error === "setup" && <p className={styles.error}>Operator access has not been configured yet.</p>}
           <button type="submit">Sign in to operator backend</button>
         </form>
 
