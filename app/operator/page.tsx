@@ -13,17 +13,19 @@ export const metadata: Metadata = {
 };
 
 export default function OperatorPage() {
+  const gatewayIp = "3.1.11.194";
   const rtmpServer =
     process.env.NEXT_PUBLIC_RTMP_BASE_URL ??
-    "rtmp://livestream.flaredynamics.com:1935/live";
+    `rtmp://${gatewayIp}:1935/live`;
   const streamPath = "drone";
-  const publishAddress = `${rtmpServer.replace(/\/$/, "")}/${streamPath}`;
+  const publishAddress = `${rtmpServer.replace(/\\/$/, "")}/${streamPath}`;
   const hlsAddress =
     process.env.NEXT_PUBLIC_HLS_STREAM_URL ??
-    "https://livestream.flaredynamics.com/live/drone/index.m3u8";
+    "/api/hls/live/drone/index.m3u8";
 
   return (
     <OperatorDashboard
+      gatewayIp={gatewayIp}
       rtmpServer={rtmpServer}
       streamPath={streamPath}
       publishAddress={publishAddress}
