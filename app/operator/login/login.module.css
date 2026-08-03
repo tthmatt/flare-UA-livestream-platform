@@ -30,7 +30,7 @@
   letter-spacing: 0.13em;
 }
 
-h1 {
+.card h1 {
   margin: 10px 0;
   font-size: 36px;
   letter-spacing: -0.04em;
