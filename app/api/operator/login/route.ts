@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import {
   createOperatorSession,
   isOperatorPassword,
+  operatorAccessConfigured,
   operatorSessionCookie,
 } from "@/lib/operator-auth";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  if (!operatorAccessConfigured()) {
+    return NextResponse.redirect(new URL("/operator/login?error=setup", request.url), 303);
+  }
+
   const formData = await request.formData();
   const password = formData.get("password");
 
