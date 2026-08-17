@@ -20,6 +20,11 @@ type Props = {
   streamName: string;
 };
 
+type PlaybackState = "idle" | "connecting" | "playing" | "reconnecting";
+
+const initialRetryDelayMs = 1_000;
+const maximumRetryDelayMs = 8_000;
+
 export function StreamConsole({ hlsStreamUrl }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -30,14 +35,22 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
     message: "Checking livestream status…",
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
+  const [playerRevision, setPlayerRevision] = useState(0);
+  const restartTimerRef = useRef<number | null>(null);
+  const retryDelayRef = useRef(initialRetryDelayMs);
 
   const refreshHealth = useCallback(async () => {
     setIsRefreshing(true);
     try {
       const response = await fetch("/api/stream-health", { cache: "no-store" });
       const data = (await response.json()) as Health;
+      setPlaybackState((current) =>
+        data.online ? (current === "playing" ? "playing" : "connecting") : "idle",
+      );
       setHealth(data);
     } catch {
+      setPlaybackState("idle");
       setHealth({
         configured: true,
         online: false,
@@ -50,10 +63,48 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
   }, []);
 
   useEffect(() => {
-    void refreshHealth();
+    const initialCheck = window.setTimeout(() => void refreshHealth(), 0);
     const timer = window.setInterval(() => void refreshHealth(), 8_000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearTimeout(initialCheck);
+      window.clearInterval(timer);
+    };
   }, [refreshHealth]);
+
+  const clearRestartTimer = useCallback(() => {
+    if (restartTimerRef.current === null) return;
+    window.clearTimeout(restartTimerRef.current);
+    restartTimerRef.current = null;
+  }, []);
+
+  const restartPlayerNow = useCallback(() => {
+    clearRestartTimer();
+    retryDelayRef.current = initialRetryDelayMs;
+    setPlaybackState("reconnecting");
+    setPlayerRevision((revision) => revision + 1);
+    void refreshHealth();
+  }, [clearRestartTimer, refreshHealth]);
+
+  const schedulePlayerRestart = useCallback(() => {
+    if (!health.online || restartTimerRef.current !== null) return;
+
+    setPlaybackState("reconnecting");
+    const delay = retryDelayRef.current;
+    retryDelayRef.current = Math.min(delay * 2, maximumRetryDelayMs);
+    restartTimerRef.current = window.setTimeout(() => {
+      restartTimerRef.current = null;
+      setPlayerRevision((revision) => revision + 1);
+    }, delay);
+    void refreshHealth();
+  }, [health.online, refreshHealth]);
+
+  useEffect(() => {
+    if (health.online) return;
+    clearRestartTimer();
+    retryDelayRef.current = initialRetryDelayMs;
+  }, [clearRestartTimer, health.online]);
+
+  useEffect(() => clearRestartTimer, [clearRestartTimer]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -70,11 +121,21 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
     cleanUp();
     if (!health.online) return cleanUp;
 
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsStreamUrl;
-      void video.play().catch(() => undefined);
-      return cleanUp;
-    }
+    const handlePlaying = () => {
+      clearRestartTimer();
+      retryDelayRef.current = initialRetryDelayMs;
+      setPlaybackState("playing");
+    };
+    const handleVideoError = () => schedulePlayerRestart();
+
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("error", handleVideoError);
+
+    const cleanUpPlayer = () => {
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("error", handleVideoError);
+      cleanUp();
+    };
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -84,6 +145,7 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
         backBufferLength: 15,
       });
       hlsRef.current = hls;
+      let attemptedMediaRecovery = false;
       hls.loadSource(hlsStreamUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -91,14 +153,38 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
       });
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (!data.fatal) return;
-        if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) void refreshHealth();
+
+        if (data.type === Hls.ErrorTypes.MEDIA_ERROR && !attemptedMediaRecovery) {
+          attemptedMediaRecovery = true;
+          hls.recoverMediaError();
+          return;
+        }
+
+        hls.destroy();
+        if (hlsRef.current === hls) hlsRef.current = null;
+        schedulePlayerRestart();
       });
-      return cleanUp;
+      return cleanUpPlayer;
     }
 
-    return cleanUp;
-  }, [health.online, hlsStreamUrl, refreshHealth]);
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsStreamUrl;
+      void video.play().catch(() => undefined);
+      return cleanUpPlayer;
+    }
+
+    schedulePlayerRestart();
+    return cleanUpPlayer;
+  }, [
+    clearRestartTimer,
+    health.online,
+    hlsStreamUrl,
+    playerRevision,
+    schedulePlayerRestart,
+  ]);
+
+  const isPlaying = health.online && playbackState === "playing";
+  const isReconnecting = health.online && !isPlaying;
 
   const lastChecked = health.checkedAt
     ? new Intl.DateTimeFormat("en-SG", {
@@ -121,9 +207,13 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
         <a href="https://www.flaredynamics.com/" aria-label="Flare Dynamics homepage">
           <Image className="viewer-logo" src={flareLogo} alt="Flare Dynamics" priority />
         </a>
-        <div className={`viewer-status ${health.online ? "is-live" : ""}`}>
+        <div
+          className={`viewer-status ${
+            isPlaying ? "is-live" : isReconnecting ? "is-reconnecting" : ""
+          }`}
+        >
           <span className="status-dot" />
-          {health.online ? "LIVE NOW" : "STANDBY"}
+          {isPlaying ? "LIVE NOW" : isReconnecting ? "RECONNECTING" : "STANDBY"}
         </div>
       </header>
 
@@ -141,8 +231,20 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
         <article className="viewer-card">
           <div className="viewer-toolbar">
             <div>
-              {health.online ? <Radio size={17} /> : <WifiOff size={17} />}
-              <span>{health.online ? "AIRCRAFT FEED ACTIVE" : "AIRCRAFT FEED PAUSED"}</span>
+              {isPlaying ? (
+                <Radio size={17} />
+              ) : isReconnecting ? (
+                <RefreshCw className="spin" size={17} />
+              ) : (
+                <WifiOff size={17} />
+              )}
+              <span>
+                {isPlaying
+                  ? "AIRCRAFT FEED ACTIVE"
+                  : isReconnecting
+                    ? "RECONNECTING TO AIRCRAFT"
+                    : "AIRCRAFT FEED PAUSED"}
+              </span>
             </div>
             <button type="button" onClick={enterFullscreen} aria-label="Enter fullscreen">
               <Maximize size={17} />
@@ -174,6 +276,22 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
               </div>
             )}
 
+            {isReconnecting && (
+              <div className="standby-screen" role="status" aria-live="polite">
+                <div className="battery-animation" aria-hidden="true">
+                  <RefreshCw size={38} />
+                  <span />
+                </div>
+                <span className="standby-label">RESTORING LIVE VIDEO</span>
+                <h2>Reconnecting to aircraft feed</h2>
+                <p>The player will jump back to the latest live frame automatically.</p>
+                <button type="button" onClick={restartPlayerNow}>
+                  <RefreshCw size={16} />
+                  Retry now
+                </button>
+              </div>
+            )}
+
             <div className="viewer-watermark">
               <Image src={flareLogo} alt="" aria-hidden="true" />
             </div>
@@ -181,7 +299,7 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
 
           <footer className="viewer-footer">
             <span>
-              <strong>{health.online ? "LIVE" : "STANDBY"}</strong>
+              <strong>{isPlaying ? "LIVE" : isReconnecting ? "CONNECTING" : "STANDBY"}</strong>
               Stream status
             </span>
             <span>
