@@ -16,6 +16,9 @@ services:
       MTX_MOQ: "false"
       MTX_HLSALWAYSREMUX: "true"
       MTX_HLSVARIANT: lowLatency
+      # Retain a longer rolling window so delayed IP-proxied viewers do
+      # not request a segment that MediaMTX has already removed.
+      MTX_HLSSEGMENTCOUNT: "30"
       MTX_HLSALLOWORIGINS_0: ${WEB_ORIGIN:?Set WEB_ORIGIN in .env}
       MTX_WEBRTCALLOWORIGINS_0: ${WEB_ORIGIN:?Set WEB_ORIGIN in .env}
       MTX_WEBRTCADDITIONALHOSTS_0: ${WEBRTC_PUBLIC_HOST:?Set WEBRTC_PUBLIC_HOST in .env}
@@ -37,4 +40,3 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-
