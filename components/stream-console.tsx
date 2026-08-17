@@ -24,6 +24,7 @@ type PlaybackState = "idle" | "connecting" | "playing" | "reconnecting";
 
 const initialRetryDelayMs = 1_000;
 const maximumRetryDelayMs = 8_000;
+const playbackStallTimeoutMs = 12_000;
 
 export function StreamConsole({ hlsStreamUrl }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -38,6 +39,7 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
   const [playbackState, setPlaybackState] = useState<PlaybackState>("idle");
   const [playerRevision, setPlayerRevision] = useState(0);
   const restartTimerRef = useRef<number | null>(null);
+  const stallTimerRef = useRef<number | null>(null);
   const retryDelayRef = useRef(initialRetryDelayMs);
 
   const refreshHealth = useCallback(async () => {
@@ -77,6 +79,12 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
     restartTimerRef.current = null;
   }, []);
 
+  const clearStallTimer = useCallback(() => {
+    if (stallTimerRef.current === null) return;
+    window.clearTimeout(stallTimerRef.current);
+    stallTimerRef.current = null;
+  }, []);
+
   const restartPlayerNow = useCallback(() => {
     clearRestartTimer();
     retryDelayRef.current = initialRetryDelayMs;
@@ -106,11 +114,14 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
 
   useEffect(() => clearRestartTimer, [clearRestartTimer]);
 
+  useEffect(() => clearStallTimer, [clearStallTimer]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const cleanUp = () => {
+      clearStallTimer();
       hlsRef.current?.destroy();
       hlsRef.current = null;
       video.pause();
@@ -121,19 +132,51 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
     cleanUp();
     if (!health.online) return cleanUp;
 
+    const armStallTimer = () => {
+      clearStallTimer();
+      if (video.paused || video.ended || document.visibilityState !== "visible") return;
+
+      stallTimerRef.current = window.setTimeout(() => {
+        stallTimerRef.current = null;
+        if (video.paused || video.ended || document.visibilityState !== "visible") return;
+        schedulePlayerRestart();
+      }, playbackStallTimeoutMs);
+    };
     const handlePlaying = () => {
       clearRestartTimer();
       retryDelayRef.current = initialRetryDelayMs;
       setPlaybackState("playing");
+      armStallTimer();
     };
     const handleVideoError = () => schedulePlayerRestart();
+    const handlePlaybackProgress = () => armStallTimer();
+    const handlePlaybackPause = () => clearStallTimer();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        armStallTimer();
+      } else {
+        clearStallTimer();
+      }
+    };
 
     video.addEventListener("playing", handlePlaying);
     video.addEventListener("error", handleVideoError);
+    video.addEventListener("timeupdate", handlePlaybackProgress);
+    video.addEventListener("waiting", handlePlaybackProgress);
+    video.addEventListener("stalled", handlePlaybackProgress);
+    video.addEventListener("pause", handlePlaybackPause);
+    video.addEventListener("ended", handlePlaybackPause);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     const cleanUpPlayer = () => {
       video.removeEventListener("playing", handlePlaying);
       video.removeEventListener("error", handleVideoError);
+      video.removeEventListener("timeupdate", handlePlaybackProgress);
+      video.removeEventListener("waiting", handlePlaybackProgress);
+      video.removeEventListener("stalled", handlePlaybackProgress);
+      video.removeEventListener("pause", handlePlaybackPause);
+      video.removeEventListener("ended", handlePlaybackPause);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       cleanUp();
     };
 
@@ -177,6 +220,7 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
     return cleanUpPlayer;
   }, [
     clearRestartTimer,
+    clearStallTimer,
     health.online,
     hlsStreamUrl,
     playerRevision,
