@@ -243,24 +243,6 @@
 .standby-screen button:disabled { opacity: 0.6; }
 .spin { animation: viewer-spin 0.8s linear infinite; }
 
-.viewer-watermark {
-  position: absolute;
-  z-index: 3;
-  right: 18px;
-  bottom: 16px;
-  width: clamp(120px, 18vw, 210px);
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(8px);
-}
-
-.viewer-watermark img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
 .viewer-footer {
   min-height: 74px;
   padding: 14px 18px;
