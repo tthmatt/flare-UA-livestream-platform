@@ -336,9 +336,11 @@ export function StreamConsole({ hlsStreamUrl }: Props) {
               </div>
             )}
 
-            <div className="viewer-watermark">
-              <Image src={flareLogo} alt="" aria-hidden="true" />
-            </div>
+            {health.online && (
+              <div className="viewer-watermark">
+                <Image src={flareLogo} alt="" aria-hidden="true" />
+              </div>
+            )}
           </div>
 
           <footer className="viewer-footer">
